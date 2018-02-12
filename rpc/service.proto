@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package blaedj.scriptum.proto;
+option go_package = "scriptumproto";
+
+service ScriptumService  {
+  rpc NewDocument(Document) returns (NewDocumentResponse);
+  rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
+}
+
+message Document {
+  string title = 1;
+  string body = 2;
+}
+
+message NewDocumentResponse {
+  string err = 1;
+  string document_id = 2;
+}
+
+message DeleteDocumentRequest {
+  string uuid = 1;
+}
+
+message DeleteDocumentResponse {
+  string err = 1;
+}
+
