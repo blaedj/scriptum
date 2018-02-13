@@ -16,11 +16,11 @@ func newULID() string {
 }
 
 func TestSuccessfulSave(t *testing.T) {
-	contents := "hello World\n"
+	contents := "hello World"
 	docID := newULID()
 	ownerID := "myownerulid"
-	fs := NewFileStore(ownerID)
-	err := fs.Save(contents, docID)
+	fs := NewFileStore()
+	err := fs.Save(contents, docID, ownerID)
 	if err != nil {
 		t.Errorf("FileStore.save(%v, %v) failed with error: %v", contents, docID, err)
 	}

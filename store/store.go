@@ -6,22 +6,31 @@ import (
 	"os"
 )
 
-type FileStore struct {
-	ownerUUID string
+type FileStore struct{}
+
+func NewFileStore() *FileStore {
+	return &FileStore{}
 }
 
-func NewFileStore(ownerID string) *FileStore {
-	return &FileStore{ownerUUID: ownerID}
+func dirExists(path string) (bool, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false, nil
+	}
+	return true, nil
 }
 
 //  TODO: what are the error conditions here?
-//  TODO: the './docs' should be a config variable or flag value
-func (fs *FileStore) Save(contents, docUUID string) error {
-	dirpath := fmt.Sprintf("docs/%s", fs.ownerUUID)
-	err := os.MkdirAll(dirpath, 0700)
-	if err != nil {
-		return errors.New(fmt.Sprintf("failed to mkdir: %v", err))
+//  TODO: the 'docs' should be a config variable or flag value
+func (fs *FileStore) Save(contents, docUUID, ownerID string) error {
+	dirpath := fmt.Sprintf("docs/%s", ownerID)
+	haveDir, _ := dirExists(dirpath)
+	if !haveDir {
+		err2 := os.MkdirAll(dirpath, 0700)
+		if err2 != nil {
+			return errors.New(fmt.Sprintf("failed to mkdir: %v", err2))
+		}
 	}
+
 	f, err := os.Create(fmt.Sprintf("%s/%s", dirpath, docUUID))
 	if err != nil {
 		return errors.New(fmt.Sprintf("couldn't create file: %v", err))
