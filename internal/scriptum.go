@@ -21,19 +21,22 @@ func NewScriptumService(storage store.FileStore, logger log.Logger) (*ScriptumSe
 	return &ScriptumService{store: storage, logger: logger}, nil
 }
 
-func (svc ScriptumService) NewDocument(ctx context.Context, doc *pb.Document, ownerID string) (*pb.NewDocumentResponse, error) {
-	t := time.Unix(100000, 0)
+func (svc ScriptumService) NewDocument(ctx context.Context, doc *pb.Document) (*pb.NewDocumentResponse, error) {
+	t := time.Now()
 	entropy := rand.New(rand.NewSource(t.UnixNano()))
 	docID := ulid.MustNew(ulid.Timestamp(t), entropy)
 
+	ownerID := doc.OwnerId
 	err := svc.store.Save(doc.Contents, docID.String(), ownerID)
 	if err != nil {
+		svc.logger.Log("event", "new_document_failure", "err", err)
 		return &pb.NewDocumentResponse{
 			Err:        fmt.Sprintf("%v", err),
 			DocumentId: "",
 		}, err
 	}
 
+	svc.logger.Log("event", "new_document_success", "documentID", docID.String())
 	return &pb.NewDocumentResponse{
 		Err:        "",
 		DocumentId: docID.String(),

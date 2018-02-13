@@ -12,10 +12,11 @@ service ScriptumService  {
 }
 
 message Document {
-  string title = 1;
-  string contents = 2;
-  string id = 3; // should be a ULID value (see github.com/ulid)
+  string title                       = 1;
+  string contents                    = 2;
+  string id                          = 3; // should be a ULID value (see github.com/ulid)
   google.protobuf.Timestamp saved_at = 4;
+  string owner_id                    = 5; // should be a ULID value (see github.com/ulid)
 }
 
 message NewDocumentResponse {
