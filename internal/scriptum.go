@@ -17,16 +17,20 @@ type ScriptumService struct {
 	logger log.Logger
 }
 
+func NewScriptumService(storage store.FileStore, logger log.Logger) (*ScriptumService, error) {
+	return &ScriptumService{store: storage, logger: logger}, nil
+}
+
 func (svc *ScriptumService) NewDocument(ctx context.Context, doc pb.Document) (pb.NewDocumentResponse, error) {
 	t := time.Unix(100000, 0)
 	entropy := rand.New(rand.NewSource(t.UnixNano()))
 	docID := ulid.MustNew(ulid.Timestamp(t), entropy)
 
-	err := svc.store.Save(doc.contents, docID.String())
+	err := svc.store.Save(doc.Contents, docID.String())
 	if err != nil {
 		return pb.NewDocumentResponse{
 			Err:        fmt.Sprintf("%v", err),
-			DocumentId: docID.String(),
+			DocumentId: "",
 		}, err
 	}
 
