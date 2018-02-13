@@ -2,14 +2,51 @@
 
 
 [[projects]]
+  name = "github.com/go-kit/kit"
+  packages = [
+    "log",
+    "log/level"
+  ]
+  revision = "4dc7be5d2d12881735283bcab7352178e190fc71"
+  version = "v0.6.0"
+
+[[projects]]
+  name = "github.com/go-logfmt/logfmt"
+  packages = ["."]
+  revision = "390ab7935ee28ec6b286364bba9b4dd6410cb3d5"
+  version = "v0.3.0"
+
+[[projects]]
+  name = "github.com/go-stack/stack"
+  packages = ["."]
+  revision = "259ab82a6cad3992b4e21ff5cac294ccb06474bc"
+  version = "v1.7.0"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = [
     "jsonpb",
     "proto",
-    "ptypes/struct"
+    "ptypes/struct",
+    "ptypes/timestamp"
   ]
   revision = "925541529c1fa6821df4e44ce2723319eb2be768"
   version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kolide/kit"
+  packages = [
+    "env",
+    "logutil"
+  ]
+  revision = "d4b803f4eea66a463259243f2e95bad5124b7310"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kr/logfmt"
+  packages = ["."]
+  revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
   name = "github.com/oklog/ulid"
@@ -30,6 +67,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b0f04d30d1fd41d93cb1a1abe260ac451e88fcbba7ea8f7b0cc056fbff3e649f"
+  inputs-digest = "18a927e53a41c308650fd254ccba3bdd60d0ec7ddf73b4866938f6f200e41e56"
   solver-name = "gps-cdcl"
   solver-version = 1
