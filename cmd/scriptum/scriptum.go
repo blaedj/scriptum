@@ -12,12 +12,15 @@ import (
 
 func main() {
 	var (
-		flAddr  = flag.String("addr", env.String("ADDR", ":8774"), "the server address (default :8774)")
-		flDebug = flag.Bool("debug", env.Bool("DEBUG", false), "enable debug logging (default false)")
+		flAddr      = flag.String("addr", env.String("ADDR", ":8774"), "the server address (default :8774)")
+		flDebug     = flag.Bool("debug", env.Bool("DEBUG", false), "enable debug logging (default false)")
+		flStorePath = flag.String("storage_dir", env.String("STORAGE_DIR", "/usr/local/var/scriptum"), "Root directory for file store")
 	)
 	flag.Parse()
-	// fstore := store.
-	fstore := store.FileStore{}
+	//  TODO: properly create the FileStore, pass in the url
+	fstore := store.NewFileStore(flStorePath)
 	logger := logutil.NewServerLogger(*flDebug)
-	scriptum.NewScriptumService(fstore, logger)
+	svc, err := scriptum.NewScriptumService(fstore, logger)
+	twirpHandler := pb.NewScriptumServiceServer(*svc, nil)
+	http.ListenAndServe(flAddr, twirpHandler)
 }

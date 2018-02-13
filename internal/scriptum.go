@@ -41,10 +41,12 @@ func (svc ScriptumService) NewDocument(ctx context.Context, doc *pb.Document, ow
 }
 
 func (svc ScriptumService) DeleteDocument(ctx context.Context, req *pb.DeleteDocumentRequest) (*pb.DeleteDocumentResponse, error) {
+	// noop for now
 	return &pb.DeleteDocumentResponse{Err: ""}, nil
 }
 
 //SaveDocument(context.Context, *Document) (*SaveDocumentResponse, error)
 func (svc ScriptumService) SaveDocument(ctx context.Context, doc *pb.Document) (*pb.SaveDocumentResponse, error) {
 	// noop for now
+	return &pb.SaveDocumentResponse{}, nil
 }

@@ -6,10 +6,12 @@ import (
 	"os"
 )
 
-type FileStore struct{}
+type FileStore struct {
+	rootDir string // root path to store files at.
+}
 
-func NewFileStore() *FileStore {
-	return &FileStore{}
+func NewFileStore(root string) *FileStore {
+	return &FileStore{rootDir: root}
 }
 
 func dirExists(path string) (bool, error) {
@@ -22,7 +24,7 @@ func dirExists(path string) (bool, error) {
 //  TODO: what are the error conditions here?
 //  TODO: the 'docs' should be a config variable or flag value
 func (fs *FileStore) Save(contents, docUUID, ownerID string) error {
-	dirpath := fmt.Sprintf("docs/%s", ownerID)
+	dirpath := fmt.Sprintf("%s/%s", fs.rootDir, ownerID)
 	haveDir, _ := dirExists(dirpath)
 	if !haveDir {
 		err2 := os.MkdirAll(dirpath, 0700)
