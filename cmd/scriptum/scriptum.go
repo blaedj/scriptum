@@ -8,6 +8,7 @@ import (
 	"github.com/kolide/kit/env"
 	"github.com/kolide/kit/logutil"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -16,11 +17,17 @@ func main() {
 		flDebug     = flag.Bool("debug", env.Bool("DEBUG", false), "enable debug logging (default false)")
 		flStorePath = flag.String("storage_dir", env.String("STORAGE_DIR", "/usr/local/var/scriptum"), "Root directory for file store")
 	)
+
 	flag.Parse()
 	//  TODO: properly create the FileStore, pass in the url
-	fstore := store.NewFileStore(flStorePath)
+	fstore := store.NewFileStore(*flStorePath)
 	logger := logutil.NewServerLogger(*flDebug)
-	svc, err := scriptum.NewScriptumService(fstore, logger)
+	svc, err := scriptum.NewScriptumService(*fstore, logger)
+	if err != nil {
+		logger.Log("err", err)
+		os.Exit(1)
+	}
 	twirpHandler := pb.NewScriptumServiceServer(*svc, nil)
-	http.ListenAndServe(flAddr, twirpHandler)
+	logger.Log("event", "server_started", "addr", *flAddr)
+	http.ListenAndServe(*flAddr, twirpHandler)
 }

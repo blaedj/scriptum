@@ -34,6 +34,7 @@ func (fs *FileStore) Save(contents, docUUID, ownerID string) error {
 	}
 
 	f, err := os.Create(fmt.Sprintf("%s/%s", dirpath, docUUID))
+	defer f.Close()
 	if err != nil {
 		return errors.New(fmt.Sprintf("couldn't create file: %v", err))
 	}
@@ -47,7 +48,6 @@ func (fs *FileStore) Save(contents, docUUID, ownerID string) error {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Unable to sync file: %v", err))
 	}
-	defer f.Close()
 
 	return nil
 }
