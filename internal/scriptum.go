@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/go-kit/kit/log"
 	"github.com/oklog/ulid"
-	"log"
 	"math/rand"
 	"time"
 
