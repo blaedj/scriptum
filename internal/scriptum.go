@@ -22,8 +22,7 @@ func (svc *ScriptumService) NewDocument(ctx context.Context, doc pb.Document) (p
 	entropy := rand.New(rand.NewSource(t.UnixNano()))
 	docID := ulid.MustNew(ulid.Timestamp(t), entropy)
 
-	contents := fmt.Sprintf("%s\n%s\n", doc.Title, doc.Body)
-	err := svc.store.Save(contents, docID.String())
+	err := svc.store.Save(doc.contents, docID.String())
 	if err != nil {
 		return pb.NewDocumentResponse{
 			Err:        fmt.Sprintf("%v", err),
@@ -38,5 +37,4 @@ func (svc *ScriptumService) NewDocument(ctx context.Context, doc pb.Document) (p
 }
 
 // func (svc *ScriptumService) DeleteDocument(ctx context.Context, req pb.DeleteDocumentRequest) (pb.DeleteDocumentResponse, error) {
-
 // }

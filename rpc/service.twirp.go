@@ -36,6 +36,8 @@ import url "net/url"
 type ScriptumService interface {
 	NewDocument(context.Context, *Document) (*NewDocumentResponse, error)
 
+	SaveDocument(context.Context, *Document) (*SaveDocumentResponse, error)
+
 	DeleteDocument(context.Context, *DeleteDocumentRequest) (*DeleteDocumentResponse, error)
 }
 
@@ -45,15 +47,16 @@ type ScriptumService interface {
 
 type scriptumServiceProtobufClient struct {
 	client HTTPClient
-	urls   [2]string
+	urls   [3]string
 }
 
 // NewScriptumServiceProtobufClient creates a Protobuf client that implements the ScriptumService interface.
 // It communicates using Protobuf and can be configured with a custom HTTPClient.
 func NewScriptumServiceProtobufClient(addr string, client HTTPClient) ScriptumService {
 	prefix := urlBase(addr) + ScriptumServicePathPrefix
-	urls := [2]string{
+	urls := [3]string{
 		prefix + "NewDocument",
+		prefix + "SaveDocument",
 		prefix + "DeleteDocument",
 	}
 	if httpClient, ok := client.(*http.Client); ok {
@@ -77,12 +80,21 @@ func (c *scriptumServiceProtobufClient) NewDocument(ctx context.Context, in *Doc
 	return out, err
 }
 
+func (c *scriptumServiceProtobufClient) SaveDocument(ctx context.Context, in *Document) (*SaveDocumentResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "blaedj.scriptum.proto")
+	ctx = ctxsetters.WithServiceName(ctx, "ScriptumService")
+	ctx = ctxsetters.WithMethodName(ctx, "SaveDocument")
+	out := new(SaveDocumentResponse)
+	err := doProtobufRequest(ctx, c.client, c.urls[1], in, out)
+	return out, err
+}
+
 func (c *scriptumServiceProtobufClient) DeleteDocument(ctx context.Context, in *DeleteDocumentRequest) (*DeleteDocumentResponse, error) {
 	ctx = ctxsetters.WithPackageName(ctx, "blaedj.scriptum.proto")
 	ctx = ctxsetters.WithServiceName(ctx, "ScriptumService")
 	ctx = ctxsetters.WithMethodName(ctx, "DeleteDocument")
 	out := new(DeleteDocumentResponse)
-	err := doProtobufRequest(ctx, c.client, c.urls[1], in, out)
+	err := doProtobufRequest(ctx, c.client, c.urls[2], in, out)
 	return out, err
 }
 
@@ -92,15 +104,16 @@ func (c *scriptumServiceProtobufClient) DeleteDocument(ctx context.Context, in *
 
 type scriptumServiceJSONClient struct {
 	client HTTPClient
-	urls   [2]string
+	urls   [3]string
 }
 
 // NewScriptumServiceJSONClient creates a JSON client that implements the ScriptumService interface.
 // It communicates using JSON and can be configured with a custom HTTPClient.
 func NewScriptumServiceJSONClient(addr string, client HTTPClient) ScriptumService {
 	prefix := urlBase(addr) + ScriptumServicePathPrefix
-	urls := [2]string{
+	urls := [3]string{
 		prefix + "NewDocument",
+		prefix + "SaveDocument",
 		prefix + "DeleteDocument",
 	}
 	if httpClient, ok := client.(*http.Client); ok {
@@ -124,12 +137,21 @@ func (c *scriptumServiceJSONClient) NewDocument(ctx context.Context, in *Documen
 	return out, err
 }
 
+func (c *scriptumServiceJSONClient) SaveDocument(ctx context.Context, in *Document) (*SaveDocumentResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "blaedj.scriptum.proto")
+	ctx = ctxsetters.WithServiceName(ctx, "ScriptumService")
+	ctx = ctxsetters.WithMethodName(ctx, "SaveDocument")
+	out := new(SaveDocumentResponse)
+	err := doJSONRequest(ctx, c.client, c.urls[1], in, out)
+	return out, err
+}
+
 func (c *scriptumServiceJSONClient) DeleteDocument(ctx context.Context, in *DeleteDocumentRequest) (*DeleteDocumentResponse, error) {
 	ctx = ctxsetters.WithPackageName(ctx, "blaedj.scriptum.proto")
 	ctx = ctxsetters.WithServiceName(ctx, "ScriptumService")
 	ctx = ctxsetters.WithMethodName(ctx, "DeleteDocument")
 	out := new(DeleteDocumentResponse)
-	err := doJSONRequest(ctx, c.client, c.urls[1], in, out)
+	err := doJSONRequest(ctx, c.client, c.urls[2], in, out)
 	return out, err
 }
 
@@ -183,6 +205,9 @@ func (s *scriptumServiceServer) ServeHTTP(resp http.ResponseWriter, req *http.Re
 	switch req.URL.Path {
 	case "/twirp/blaedj.scriptum.proto.ScriptumService/NewDocument":
 		s.serveNewDocument(ctx, resp, req)
+		return
+	case "/twirp/blaedj.scriptum.proto.ScriptumService/SaveDocument":
+		s.serveSaveDocument(ctx, resp, req)
 		return
 	case "/twirp/blaedj.scriptum.proto.ScriptumService/DeleteDocument":
 		s.serveDeleteDocument(ctx, resp, req)
@@ -314,6 +339,146 @@ func (s *scriptumServiceServer) serveNewDocumentProtobuf(ctx context.Context, re
 	}
 	if respContent == nil {
 		s.writeError(ctx, resp, twirp.InternalError("received a nil *NewDocumentResponse and nil error while calling NewDocument. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	respBytes, err := proto.Marshal(respContent)
+	if err != nil {
+		err = wrapErr(err, "failed to marshal proto response")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/protobuf")
+	resp.WriteHeader(http.StatusOK)
+	if _, err = resp.Write(respBytes); err != nil {
+		log.Printf("errored while writing response to client, but already sent response status code to 200: %s", err)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *scriptumServiceServer) serveSaveDocument(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	header := req.Header.Get("Content-Type")
+	i := strings.Index(header, ";")
+	if i == -1 {
+		i = len(header)
+	}
+	switch strings.TrimSpace(strings.ToLower(header[:i])) {
+	case "application/json":
+		s.serveSaveDocumentJSON(ctx, resp, req)
+	case "application/protobuf":
+		s.serveSaveDocumentProtobuf(ctx, resp, req)
+	default:
+		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
+		twerr := badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, twerr)
+	}
+}
+
+func (s *scriptumServiceServer) serveSaveDocumentJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "SaveDocument")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	defer closebody(req.Body)
+	reqContent := new(Document)
+	unmarshaler := jsonpb.Unmarshaler{AllowUnknownFields: true}
+	if err = unmarshaler.Unmarshal(req.Body, reqContent); err != nil {
+		err = wrapErr(err, "failed to parse request json")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+
+	// Call service method
+	var respContent *SaveDocumentResponse
+	func() {
+		defer func() {
+			// In case of a panic, serve a 500 error and then panic.
+			if r := recover(); r != nil {
+				s.writeError(ctx, resp, twirp.InternalError("Internal service panic"))
+				panic(r)
+			}
+		}()
+		respContent, err = s.SaveDocument(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *SaveDocumentResponse and nil error while calling SaveDocument. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	var buf bytes.Buffer
+	marshaler := &jsonpb.Marshaler{OrigName: true}
+	if err = marshaler.Marshal(&buf, respContent); err != nil {
+		err = wrapErr(err, "failed to marshal json response")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/json")
+	resp.WriteHeader(http.StatusOK)
+	if _, err = resp.Write(buf.Bytes()); err != nil {
+		log.Printf("errored while writing response to client, but already sent response status code to 200: %s", err)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *scriptumServiceServer) serveSaveDocumentProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "SaveDocument")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	defer closebody(req.Body)
+	buf, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		err = wrapErr(err, "failed to read request body")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+	reqContent := new(Document)
+	if err = proto.Unmarshal(buf, reqContent); err != nil {
+		err = wrapErr(err, "failed to parse request proto")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+
+	// Call service method
+	var respContent *SaveDocumentResponse
+	func() {
+		defer func() {
+			// In case of a panic, serve a 500 error and then panic.
+			if r := recover(); r != nil {
+				s.writeError(ctx, resp, twirp.InternalError("Internal service panic"))
+				panic(r)
+			}
+		}()
+		respContent, err = s.SaveDocument(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *SaveDocumentResponse and nil error while calling SaveDocument. nil responses are not supported"))
 		return
 	}
 
@@ -898,21 +1063,27 @@ func callError(ctx context.Context, h *twirp.ServerHooks, err twirp.Error) conte
 }
 
 var twirpFileDescriptor0 = []byte{
-	// 251 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x2c, 0x2a, 0x48, 0xd6,
-	0x2f, 0x4e, 0x2d, 0x2a, 0xcb, 0x4c, 0x4e, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x12, 0x4d,
-	0xca, 0x49, 0x4c, 0x4d, 0xc9, 0xd2, 0x2b, 0x4e, 0x2e, 0xca, 0x2c, 0x28, 0x29, 0xcd, 0x85, 0x08,
-	0x2b, 0x99, 0x70, 0x71, 0xb8, 0xe4, 0x27, 0x97, 0xe6, 0xa6, 0xe6, 0x95, 0x08, 0x89, 0x70, 0xb1,
-	0x96, 0x64, 0x96, 0xe4, 0xa4, 0x4a, 0x30, 0x2a, 0x30, 0x6a, 0x70, 0x06, 0x41, 0x38, 0x42, 0x42,
-	0x5c, 0x2c, 0x49, 0xf9, 0x29, 0x95, 0x12, 0x4c, 0x60, 0x41, 0x30, 0x5b, 0xc9, 0x83, 0x4b, 0xd8,
-	0x2f, 0xb5, 0x1c, 0xa6, 0x31, 0x28, 0xb5, 0xb8, 0x20, 0x3f, 0xaf, 0x38, 0x55, 0x48, 0x80, 0x8b,
-	0x39, 0xb5, 0xa8, 0x08, 0xaa, 0x1d, 0xc4, 0x14, 0x92, 0xe7, 0xe2, 0x4e, 0x81, 0xaa, 0x8a, 0xcf,
-	0x4c, 0x81, 0x9a, 0xc1, 0x05, 0x13, 0xf2, 0x4c, 0x51, 0xd2, 0xe6, 0x12, 0x75, 0x49, 0xcd, 0x49,
-	0x2d, 0x49, 0x45, 0x18, 0x56, 0x58, 0x9a, 0x5a, 0x5c, 0x02, 0xb2, 0xb6, 0xb4, 0x34, 0x33, 0x05,
-	0x6a, 0x18, 0x98, 0xad, 0xa4, 0xc5, 0x25, 0x86, 0xae, 0x18, 0x97, 0xcd, 0x46, 0x77, 0x18, 0xb9,
-	0xf8, 0x83, 0xa1, 0x7e, 0x0d, 0x86, 0x84, 0x84, 0x50, 0x14, 0x17, 0x37, 0x92, 0xb3, 0x85, 0xe4,
-	0xf5, 0xb0, 0x86, 0x89, 0x1e, 0x4c, 0x81, 0x94, 0x16, 0x0e, 0x05, 0xd8, 0xfc, 0x9e, 0xcb, 0xc5,
-	0x87, 0xea, 0x36, 0x21, 0x1d, 0x5c, 0xc6, 0x63, 0xf3, 0xaf, 0x94, 0x2e, 0x91, 0xaa, 0x21, 0xd6,
-	0x39, 0xf1, 0x47, 0xf1, 0xc2, 0x14, 0x82, 0xd5, 0x25, 0xb1, 0x81, 0x29, 0x63, 0x40, 0x00, 0x00,
-	0x00, 0xff, 0xff, 0xb6, 0x60, 0x6d, 0x50, 0xfb, 0x01, 0x00, 0x00,
+	// 337 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0xcf, 0x4e, 0xc2, 0x40,
+	0x10, 0xc6, 0xd3, 0xe2, 0x1f, 0x1c, 0x14, 0x74, 0x05, 0xd3, 0xf4, 0x02, 0xe9, 0x89, 0xa0, 0x96,
+	0x04, 0x63, 0xe2, 0x55, 0xc3, 0x41, 0x2f, 0x1e, 0xc0, 0x13, 0x31, 0x21, 0xa5, 0x3b, 0x92, 0x35,
+	0x6d, 0xb7, 0x76, 0xa7, 0xf8, 0x00, 0xbe, 0x95, 0x4f, 0x67, 0xec, 0xb6, 0x06, 0xb1, 0x0d, 0x9e,
+	0xda, 0x99, 0xfd, 0xed, 0x7c, 0xdf, 0xcc, 0x2c, 0x9c, 0x24, 0xb1, 0x3f, 0x54, 0x98, 0xac, 0x84,
+	0x8f, 0x6e, 0x9c, 0x48, 0x92, 0xac, 0xb3, 0x08, 0x3c, 0xe4, 0xaf, 0xae, 0xf2, 0x13, 0x11, 0x53,
+	0x1a, 0xea, 0xb4, 0xdd, 0x5d, 0x4a, 0xb9, 0x0c, 0x70, 0x98, 0x45, 0x8b, 0xf4, 0x65, 0x48, 0x22,
+	0x44, 0x45, 0x5e, 0x18, 0x6b, 0xc0, 0xf9, 0x30, 0xa0, 0x3e, 0x96, 0x7e, 0x1a, 0x62, 0x44, 0xac,
+	0x0d, 0xbb, 0x24, 0x28, 0x40, 0xcb, 0xe8, 0x19, 0xfd, 0x83, 0x89, 0x0e, 0x98, 0x0d, 0x75, 0x5f,
+	0x46, 0x84, 0x11, 0x29, 0xcb, 0xcc, 0x0e, 0x7e, 0x62, 0xd6, 0x04, 0x53, 0x70, 0xab, 0x96, 0x65,
+	0x4d, 0xc1, 0xd9, 0x35, 0xd4, 0x95, 0xb7, 0x42, 0x3e, 0xf7, 0xc8, 0xda, 0xe9, 0x19, 0xfd, 0xc6,
+	0xc8, 0x76, 0xb5, 0x05, 0xb7, 0xb0, 0xe0, 0x3e, 0x15, 0x16, 0x26, 0xfb, 0x19, 0x7b, 0x4b, 0xce,
+	0x3d, 0x9c, 0x3e, 0xe2, 0x7b, 0xe1, 0x63, 0x82, 0x2a, 0x96, 0x91, 0x42, 0x76, 0x0c, 0x35, 0x4c,
+	0x92, 0xdc, 0xcd, 0xf7, 0x2f, 0xeb, 0x42, 0x83, 0xe7, 0xd4, 0x5c, 0xf0, 0xdc, 0x0e, 0x14, 0xa9,
+	0x07, 0xee, 0xf4, 0xa1, 0x3d, 0xf5, 0x56, 0xb8, 0xbd, 0x94, 0x73, 0x03, 0x9d, 0x31, 0x06, 0x48,
+	0x6b, 0xec, 0x5b, 0x8a, 0x8a, 0x36, 0x35, 0x8c, 0x3f, 0x1a, 0x03, 0x38, 0xdb, 0xbc, 0x59, 0xa5,
+	0x32, 0xfa, 0x34, 0xa1, 0x35, 0xcd, 0x77, 0x32, 0xd5, 0x1b, 0x63, 0x33, 0x68, 0xac, 0x75, 0xcb,
+	0xba, 0x6e, 0xe9, 0xee, 0xdc, 0x02, 0xb0, 0x07, 0x15, 0x40, 0xd9, 0xc8, 0x9e, 0xe1, 0x70, 0xbd,
+	0xff, 0xed, 0xc5, 0xcf, 0x2b, 0x80, 0xd2, 0x29, 0x86, 0xd0, 0xfc, 0xdd, 0x39, 0xbb, 0xa8, 0xaa,
+	0x5f, 0x36, 0x5a, 0xfb, 0xf2, 0x9f, 0xb4, 0x96, 0xbb, 0x6b, 0xcd, 0x8e, 0x0a, 0x50, 0xbf, 0x9e,
+	0xbd, 0xec, 0x73, 0xf5, 0x15, 0x00, 0x00, 0xff, 0xff, 0x05, 0x93, 0x62, 0x8c, 0x01, 0x03, 0x00,
+	0x00,
 }

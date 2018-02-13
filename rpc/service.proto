@@ -1,16 +1,21 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 package blaedj.scriptum.proto;
 option go_package = "scriptumproto";
 
 service ScriptumService  {
   rpc NewDocument(Document) returns (NewDocumentResponse);
+  rpc SaveDocument(Document) returns (SaveDocumentResponse);
   rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
 }
 
 message Document {
   string title = 1;
-  string body = 2;
+  string contents = 2;
+  string id = 3; // should be a ULID value (see github.com/ulid)
+  google.protobuf.Timestamp saved_at = 4;
 }
 
 message NewDocumentResponse {
@@ -18,8 +23,12 @@ message NewDocumentResponse {
   string document_id = 2;
 }
 
+message SaveDocumentResponse {
+  string err = 1;
+}
+
 message DeleteDocumentRequest {
-  string uuid = 1;
+  string document_id = 1;
 }
 
 message DeleteDocumentResponse {
