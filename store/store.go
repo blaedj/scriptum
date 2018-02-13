@@ -6,6 +6,10 @@ import (
 	"os"
 )
 
+type Store interface {
+	Save(contents, docUUID, ownerID string) error
+}
+
 type FileStore struct {
 	rootDir string // root path to store files at.
 }

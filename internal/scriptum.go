@@ -13,11 +13,11 @@ import (
 )
 
 type ScriptumService struct {
-	store  store.FileStore
+	store  store.Store
 	logger log.Logger
 }
 
-func NewScriptumService(storage store.FileStore, logger log.Logger) (*ScriptumService, error) {
+func NewScriptumService(storage store.Store, logger log.Logger) (*ScriptumService, error) {
 	return &ScriptumService{store: storage, logger: logger}, nil
 }
 
